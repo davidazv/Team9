@@ -1,17 +1,29 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { IsInt, IsString, IsOptional, MinLength, MaxLength, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateReportDto {
   @IsOptional()
   @IsInt()
   @Type(() => Number)
-  @ApiProperty({ 
-    example: 1, 
+  @ApiProperty({
+    example: 1,
     description: 'ID de la categoría del reporte',
     required: false
   })
   category_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  @Type(() => Number)
+  @ApiProperty({
+    example: 2,
+    description: 'ID del estado del reporte (1=Pendiente, 2=Aceptado, 3=Rechazado)',
+    required: false
+  })
+  status_id?: number;
 
   @IsOptional()
   @IsString()

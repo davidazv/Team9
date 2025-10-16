@@ -42,6 +42,36 @@ export class ReportController {
   }
 
   // ============================================
+  // ENDPOINT DE ADMIN - Ver TODOS los reportes (para admin panel)
+  // ============================================
+
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Ver TODOS los reportes con filtros (admin panel)' })
+  @ApiQuery({ name: 'dateFrom', required: false, description: 'Fecha desde (YYYY-MM-DD)', example: '2025-09-01' })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'Fecha hasta (YYYY-MM-DD)', example: '2025-09-30' })
+  @ApiQuery({ name: 'categoryId', required: false, description: 'ID de categoría de fraude', type: Number, example: 1 })
+  @ApiQuery({ name: 'statusId', required: false, description: 'ID de estado (1=Pendiente, 2=Aceptado, 3=Rechazado)', type: Number, example: 1 })
+  @ApiResponse({ status: 200, description: 'Lista de todos los reportes (admin).', type: [ReportResponseDto] })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  async findAllReportsAdmin(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('statusId') statusId?: string,
+  ): Promise<ReportResponseDto[]> {
+    const filters = {
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      categoryId: categoryId ? parseInt(categoryId) : undefined,
+      statusId: statusId ? parseInt(statusId) : undefined,
+    };
+
+    return await this.reportService.findAllWithFilters(filters);
+  }
+
+  // ============================================
   // ENDPOINT DE USUARIO - Ver MIS reportes
   // ============================================
 
@@ -115,6 +145,21 @@ export class ReportController {
   ): Promise<ReportResponseDto> {
     const userId = req.user.profile.id;
     return await this.reportService.create(userId, createReportDto);
+  }
+
+  @Put('admin/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar un reporte como admin (sin restricciones)' })
+  @ApiParam({ name: 'id', description: 'ID del reporte a actualizar', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Reporte actualizado.', type: ReportResponseDto })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 404, description: 'Reporte no encontrado.' })
+  async updateAsAdmin(
+    @Param('id') id: number,
+    @Body() updateReportDto: UpdateReportDto
+  ): Promise<ReportResponseDto> {
+    return await this.reportService.updateAsAdmin(id, updateReportDto);
   }
 
   @Put(':id')

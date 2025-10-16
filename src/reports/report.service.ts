@@ -229,25 +229,82 @@ export class ReportService {
   }
 
   // ============================================
-  // Actualizar un reporte existente
+  // Actualizar un reporte como admin (sin restricciones)
+  // ============================================
+  async updateAsAdmin(id: number, updateReportDto: UpdateReportDto): Promise<ReportResponseDto> {
+    const pool = this.dbService.getPool();
+
+    // Verificar que el reporte existe
+    const report = await this.findById(id);
+
+    const setParts: string[] = [];
+    const values: any[] = [];
+
+    if (updateReportDto.category_id !== undefined) {
+      setParts.push('category_id = ?');
+      values.push(updateReportDto.category_id);
+    }
+    if (updateReportDto.status_id !== undefined) {
+      setParts.push('status_id = ?');
+      values.push(updateReportDto.status_id);
+    }
+    if (updateReportDto.title !== undefined) {
+      setParts.push('title = ?');
+      values.push(updateReportDto.title);
+    }
+    if (updateReportDto.description !== undefined) {
+      setParts.push('description = ?');
+      values.push(updateReportDto.description);
+    }
+    if (updateReportDto.incident_date !== undefined) {
+      setParts.push('incident_date = ?');
+      // Convertir fecha ISO a formato MySQL (YYYY-MM-DD)
+      const date = updateReportDto.incident_date
+        ? new Date(updateReportDto.incident_date).toISOString().split('T')[0]
+        : null;
+      values.push(date);
+    }
+    if (updateReportDto.location !== undefined) {
+      setParts.push('location = ?');
+      values.push(updateReportDto.location);
+    }
+    if (updateReportDto.evidence_url !== undefined) {
+      setParts.push('evidence_url = ?');
+      values.push(updateReportDto.evidence_url);
+    }
+
+    if (setParts.length === 0) {
+      return report;
+    }
+
+    const sql = `UPDATE reports SET ${setParts.join(', ')} WHERE id = ?`;
+    values.push(id);
+
+    await pool.query(sql, values);
+
+    return this.findById(id);
+  }
+
+  // ============================================
+  // Actualizar un reporte existente (usuario normal)
   // ============================================
   async update(id: number, userId: number, updateReportDto: UpdateReportDto): Promise<ReportResponseDto> {
     const pool = this.dbService.getPool();
-    
+
     // Verificar que el reporte existe y pertenece al usuario
     const report = await this.findById(id);
     if (report.user_id !== userId) {
       throw new ForbiddenException('No tienes permiso para actualizar este reporte');
     }
-    
+
     // Verificar que el reporte esté en estado "Pendiente" (status_id = 1)
     if (report.status_id !== 1) {
       throw new ForbiddenException('Solo se pueden editar reportes en estado pendiente');
     }
-    
+
     const setParts: string[] = [];
     const values: any[] = [];
-    
+
     if (updateReportDto.category_id !== undefined) {
       setParts.push('category_id = ?');
       values.push(updateReportDto.category_id);
@@ -272,7 +329,7 @@ export class ReportService {
       setParts.push('evidence_url = ?');
       values.push(updateReportDto.evidence_url);
     }
-    
+
     if (setParts.length === 0) {
       return report;
     }
