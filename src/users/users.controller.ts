@@ -24,7 +24,7 @@ export class CreateUserDto  {
     password: string;
 }
 
-@ApiTags('Users')
+@ApiTags('users')
 @Controller('users')
 export class UsersController {
     constructor(private readonly userService: UserService) {}

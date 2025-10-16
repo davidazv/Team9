@@ -41,10 +41,19 @@ export class CreateReportDto {
   @IsString()
   @ApiProperty({ 
     example: 'Ciudad de México, CDMX', 
-    description: 'Ubicación donde ocurrió el incidente',
+    description: 'Ubicación física donde ocurrió el incidente',
     required: false
   })
   location?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ 
+    example: 'https://sitio-falso.com o +52 55 1234 5678', 
+    description: 'URL, número telefónico, email o información de contacto del fraude',
+    required: false
+  })
+  fraud_contact?: string;
 
   @IsOptional()
   @IsString()

@@ -1,0 +1,229 @@
+GUÍA DE PRUEBAS EN POSTMAN - oFRAUD API
+=============================================
+
+## CONFIGURACIÓN INICIAL
+
+1. Crear una nueva colección en Postman llamada "oFRAUD API"
+2. URL Base: http://localhost:3000
+3. Crear variables de entorno:
+   - baseUrl: http://localhost:3000
+   - userToken: (se llenará después del login)
+   - adminToken: (se llenará después del login de admin)
+
+## FLUJO DE PRUEBAS RECOMENDADO
+
+### 1. REGISTRO Y AUTENTICACIÓN
+
+A) Registrar Usuario:
+   - Método: POST
+   - URL: {{baseUrl}}/users
+   - Body (JSON):
+     {
+       "email": "test@ejemplo.com",
+       "name": "Usuario Test",
+       "password": "test123"
+     }
+
+B) Login Usuario:
+   - Método: POST
+   - URL: {{baseUrl}}/auth/login
+   - Body (JSON):
+     {
+       "email": "test@ejemplo.com",
+       "password": "test123"
+     }
+   - Guardar el access_token en la variable userToken
+
+C) Login Admin:
+   - Método: POST
+   - URL: {{baseUrl}}/auth/admin/login
+   - Body (JSON):
+     {
+       "email": "admin@ofraud.com",
+       "password": "admin2024"
+     }
+   - Guardar el access_token en la variable adminToken
+
+### 2. SUBIDA DE ARCHIVOS
+
+A) Subir Imagen (Usuario Autenticado):
+   - Método: POST
+   - URL: {{baseUrl}}/files/upload
+   - Authorization: Bearer {{userToken}}
+   - Body: form-data
+     - Key: file (tipo: File)
+     - Value: Seleccionar una imagen JPG/PNG
+   - Guardar la URL devuelta para usar en reportes
+
+B) Subir Imagen (Invitado):
+   - Método: POST
+   - URL: {{baseUrl}}/files/upload
+   - Sin Authorization
+   - Body: form-data (igual que arriba)
+
+### 3. GESTIÓN DE REPORTES
+
+A) Crear Reporte (Usuario Autenticado):
+   - Método: POST
+   - URL: {{baseUrl}}/reports
+   - Authorization: Bearer {{userToken}}
+   - Body (JSON):
+     {
+       "category_id": 1,
+       "title": "Sitio web falso de BBVA",
+       "description": "Encontré una página que imita al BBVA y solicita credenciales",
+       "incident_date": "2025-10-13",
+       "location": "Ciudad de México",
+       "evidence_url": "URL_DE_IMAGEN_SUBIDA",
+       "is_anonymous": false
+     }
+
+B) Crear Reporte (Invitado):
+   - Método: POST
+   - URL: {{baseUrl}}/reports/guest
+   - Sin Authorization
+   - Body (JSON): (mismo formato, pero siempre será anónimo)
+
+C) Ver Mis Reportes:
+   - Método: GET
+   - URL: {{baseUrl}}/reports/my-reports
+   - Authorization: Bearer {{userToken}}
+
+D) Ver Reportes Públicos:
+   - Método: GET
+   - URL: {{baseUrl}}/reports/public/accepted
+   - Sin Authorization
+   - Query params opcionales: ?categoryId=1&dateFrom=2025-09-01
+
+E) Ver Reporte por ID:
+   - Método: GET
+   - URL: {{baseUrl}}/reports/1
+   - Authorization: Bearer {{userToken}}
+
+### 4. SOLICITUDES DE AYUDA
+
+A) Crear Solicitud de Ayuda:
+   - Método: POST
+   - URL: {{baseUrl}}/help-requests
+   - Authorization: Bearer {{userToken}}
+   - Body (JSON):
+     {
+       "title": "Necesito ayuda urgente",
+       "description": "Me están llamando ahora mismo haciéndose pasar del banco",
+       "priority": "urgent"
+     }
+
+B) Ver Mis Solicitudes:
+   - Método: GET
+   - URL: {{baseUrl}}/help-requests/my-requests
+   - Authorization: Bearer {{userToken}}
+
+C) Ver Solicitudes Pendientes (Admin):
+   - Método: GET
+   - URL: {{baseUrl}}/help-requests/admin/pending
+   - Authorization: Bearer {{adminToken}}
+
+D) Responder Solicitud (Admin):
+   - Método: PATCH
+   - URL: {{baseUrl}}/help-requests/1/respond
+   - Authorization: Bearer {{adminToken}}
+   - Body (JSON):
+     {
+       "admin_response": "Hola, entiendo tu preocupación. Lo primero que debes hacer es colgar inmediatamente y no proporcionar ninguna información...",
+       "status": "resolved"
+     }
+
+### 5. GESTIÓN DE USUARIOS (ADMIN)
+
+A) Listar Usuarios:
+   - Método: GET
+   - URL: {{baseUrl}}/admin/list
+   - Authorization: Bearer {{adminToken}}
+
+B) Ver Usuario por ID:
+   - Método: GET
+   - URL: {{baseUrl}}/admin/1
+   - Authorization: Bearer {{adminToken}}
+
+### 6. GESTIÓN DE PERFIL
+
+A) Ver Mi Perfil:
+   - Método: GET
+   - URL: {{baseUrl}}/auth/profile
+   - Authorization: Bearer {{userToken}}
+
+B) Actualizar Mi Perfil:
+   - Método: PUT
+   - URL: {{baseUrl}}/users
+   - Authorization: Bearer {{userToken}}
+   - Body (JSON):
+     {
+       "name": "Nuevo Nombre",
+       "email": "nuevo@email.com"
+     }
+
+## PRUEBAS DE ERRORES
+
+1. Probar endpoints sin token (debe devolver 401)
+2. Probar endpoints de admin con token de usuario (debe devolver 403)
+3. Probar con IDs inexistentes (debe devolver 404)
+4. Probar con datos inválidos (debe devolver 400)
+
+## FILTROS Y BÚSQUEDAS
+
+Prueba estos query parameters en los endpoints que los soportan:
+
+- ?categoryId=1
+- ?statusId=2
+- ?dateFrom=2025-09-01
+- ?dateTo=2025-10-31
+- ?categoryId=1&statusId=2&dateFrom=2025-09-01
+
+## SCRIPT DE PRUEBA AUTOMATIZADO
+
+Puedes usar este script en la pestaña "Tests" de Postman:
+
+```javascript
+// Para guardar tokens automáticamente
+if (pm.response.code === 201 || pm.response.code === 200) {
+    const response = pm.response.json();
+    
+    if (response.access_token) {
+        if (pm.request.url.toString().includes('/admin/login')) {
+            pm.environment.set("adminToken", response.access_token);
+        } else {
+            pm.environment.set("userToken", response.access_token);
+        }
+    }
+    
+    if (response.url && pm.request.url.toString().includes('/files/upload')) {
+        pm.environment.set("lastImageUrl", response.url);
+    }
+}
+
+// Verificar respuesta exitosa
+pm.test("Status code is success", function () {
+    pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+});
+```
+
+## ORDEN RECOMENDADO PARA PRUEBAS COMPLETAS
+
+1. Registrar usuario
+2. Login usuario
+3. Login admin
+4. Subir imagen
+5. Crear reporte con imagen
+6. Ver reportes públicos
+7. Crear solicitud de ayuda
+8. Ver solicitudes (admin)
+9. Responder solicitud (admin)
+10. Ver notificaciones del usuario
+
+## NOTAS IMPORTANTES
+
+- Ejecutar `npm run start:dev` antes de hacer pruebas
+- Ejecutar el script SQL de migración para crear las tablas
+- Las imágenes se guardan en `/demo/public/uploads/`
+- Los tokens expiran, usar refresh si es necesario
+- Swagger UI disponible en: http://localhost:3000/api

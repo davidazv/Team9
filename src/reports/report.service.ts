@@ -19,30 +19,43 @@ export class ReportService {
   }): Promise<ReportResponseDto[]> {
     const pool = this.dbService.getPool();
     
-    let sql = 'SELECT * FROM reports WHERE 1=1';
+    let sql = `
+      SELECT 
+        r.*,
+        u.name as user_name,
+        rc.name as category_name,
+        rs.name as status_name,
+        a.name as assigned_admin_name
+      FROM reports r
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN report_categories rc ON r.category_id = rc.id
+      LEFT JOIN report_statuses rs ON r.status_id = rs.id
+      LEFT JOIN admins a ON r.assigned_admin_id = a.id
+      WHERE 1=1
+    `;
     const params: any[] = [];
     
     if (filters?.dateFrom) {
-      sql += ' AND incident_date >= ?';
+      sql += ' AND r.incident_date >= ?';
       params.push(filters.dateFrom);
     }
     
     if (filters?.dateTo) {
-      sql += ' AND incident_date <= ?';
+      sql += ' AND r.incident_date <= ?';
       params.push(filters.dateTo);
     }
     
     if (filters?.categoryId) {
-      sql += ' AND category_id = ?';
+      sql += ' AND r.category_id = ?';
       params.push(filters.categoryId);
     }
     
     if (filters?.statusId) {
-      sql += ' AND status_id = ?';
+      sql += ' AND r.status_id = ?';
       params.push(filters.statusId);
     }
     
-    sql += ' ORDER BY created_at DESC';
+    sql += ' ORDER BY r.created_at DESC';
     
     const [rows] = await pool.query(sql, params);
     return (rows as any[]).map(row => this.mapToDto(row));
@@ -96,7 +109,23 @@ export class ReportService {
   // ============================================
   async findAll(): Promise<ReportResponseDto[]> {
     const pool = this.dbService.getPool();
-    const [rows] = await pool.query('SELECT * FROM reports ORDER BY created_at DESC');
+    
+    const sql = `
+      SELECT 
+        r.*,
+        u.name as user_name,
+        rc.name as category_name,
+        rs.name as status_name,
+        a.name as assigned_admin_name
+      FROM reports r
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN report_categories rc ON r.category_id = rc.id
+      LEFT JOIN report_statuses rs ON r.status_id = rs.id
+      LEFT JOIN admins a ON r.assigned_admin_id = a.id
+      ORDER BY r.created_at DESC
+    `;
+    
+    const [rows] = await pool.query(sql);
     return (rows as any[]).map(row => this.mapToDto(row));
   }
 
@@ -105,7 +134,23 @@ export class ReportService {
   // ============================================
   async findById(id: number): Promise<ReportResponseDto> {
     const pool = this.dbService.getPool();
-    const [rows] = await pool.query('SELECT * FROM reports WHERE id = ?', [id]);
+    
+    const sql = `
+      SELECT 
+        r.*,
+        u.name as user_name,
+        rc.name as category_name,
+        rs.name as status_name,
+        a.name as assigned_admin_name
+      FROM reports r
+      LEFT JOIN users u ON r.user_id = u.id
+      LEFT JOIN report_categories rc ON r.category_id = rc.id
+      LEFT JOIN report_statuses rs ON r.status_id = rs.id
+      LEFT JOIN admins a ON r.assigned_admin_id = a.id
+      WHERE r.id = ?
+    `;
+    
+    const [rows] = await pool.query(sql, [id]);
     const reports = rows as any[];
     
     if (reports.length === 0) {
@@ -123,19 +168,60 @@ export class ReportService {
     
     const sql = `
       INSERT INTO reports 
-      (user_id, category_id, status_id, title, description, incident_date, location, evidence_url, is_anonymous) 
-      VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?)
+      (user_id, category_id, status_id, title, description, incident_date, location, fraud_contact, evidence_url, is_anonymous) 
+      VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
     `;
     
+    // Procesar fecha para extraer solo la parte de fecha (YYYY-MM-DD)
+    let incidentDate: string | null = null;
+    if (createReportDto.incident_date) {
+      const dateObj = new Date(createReportDto.incident_date);
+      incidentDate = dateObj.toISOString().split('T')[0]; // Extraer solo YYYY-MM-DD
+    }
+
     const [result] = await pool.query(sql, [
       userId,
       createReportDto.category_id,
       createReportDto.title,
       createReportDto.description,
-      createReportDto.incident_date || null,
+      incidentDate,
       createReportDto.location || null,
+      createReportDto.fraud_contact || null,
       createReportDto.evidence_url || null,
       createReportDto.is_anonymous || false
+    ]);
+    
+    const insertResult = result as any;
+    return this.findById(insertResult.insertId);
+  }
+
+  // ============================================
+  // Crear un nuevo reporte como invitado (sin usuario)
+  // ============================================
+  async createGuestReport(createReportDto: CreateReportDto): Promise<ReportResponseDto> {
+    const pool = this.dbService.getPool();
+    
+    const sql = `
+      INSERT INTO reports 
+      (user_id, category_id, status_id, title, description, incident_date, location, fraud_contact, evidence_url, is_anonymous) 
+      VALUES (NULL, ?, 1, ?, ?, ?, ?, ?, ?, 1)
+    `;
+    
+    // Procesar fecha para extraer solo la parte de fecha (YYYY-MM-DD)
+    let incidentDate: string | null = null;
+    if (createReportDto.incident_date) {
+      const dateObj = new Date(createReportDto.incident_date);
+      incidentDate = dateObj.toISOString().split('T')[0]; // Extraer solo YYYY-MM-DD
+    }
+
+    const [result] = await pool.query(sql, [
+      createReportDto.category_id,
+      createReportDto.title,
+      createReportDto.description,
+      incidentDate,
+      createReportDto.location || null,
+      createReportDto.fraud_contact || null,
+      createReportDto.evidence_url || null
     ]);
     
     const insertResult = result as any;
@@ -225,14 +311,19 @@ export class ReportService {
     return {
       id: row.id,
       user_id: row.user_id,
+      user_name: row.is_anonymous ? 'Anónimo' : row.user_name,
       category_id: row.category_id,
+      category_name: row.category_name,
       status_id: row.status_id,
+      status_name: row.status_name,
       title: row.title,
       description: row.description,
       incident_date: row.incident_date,
       location: row.location,
+      fraud_contact: row.fraud_contact,
       evidence_url: row.evidence_url,
       assigned_admin_id: row.assigned_admin_id,
+      assigned_admin_name: row.assigned_admin_name,
       is_anonymous: row.is_anonymous,
       created_at: row.created_at,
       updated_at: row.updated_at,

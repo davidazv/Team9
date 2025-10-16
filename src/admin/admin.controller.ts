@@ -6,7 +6,7 @@ import { UserResponseDto } from "src/users/dto/user-response.dto"
 import { UpdateUserDto } from "src/users/dto/user-update.dto"
 import { UserService } from "src/users/users.service"
 
-@ApiTags("Admin")
+@ApiTags("admin")
 @Controller("admin")
 @UseGuards(JwtAuthGuard, AdminGuard)
 @ApiBearerAuth()

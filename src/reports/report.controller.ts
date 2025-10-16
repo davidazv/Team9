@@ -90,6 +90,18 @@ export class ReportController {
     return await this.reportService.findById(id);
   }
 
+  @Post('guest')
+  @ApiOperation({ summary: 'Crear un nuevo reporte como invitado (siempre anónimo, sin autenticación)' })
+  @ApiResponse({ status: 201, description: 'Reporte de invitado creado exitosamente.', type: ReportResponseDto })
+  @ApiResponse({ status: 400, description: 'Datos inválidos.' })
+  async createGuestReport(
+    @Body() createReportDto: CreateReportDto
+  ): Promise<ReportResponseDto> {
+    // Forzar que sea anónimo para reportes de invitado
+    const guestReportDto = { ...createReportDto, is_anonymous: true };
+    return await this.reportService.createGuestReport(guestReportDto);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
