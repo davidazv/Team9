@@ -1,5 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery, ApiConsumes } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { join } from 'path';
 import { ReportService } from './report.service';
 import { ReportResponseDto } from './dto/report-response.dto';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -121,30 +124,84 @@ export class ReportController {
   }
 
   @Post('guest')
-  @ApiOperation({ summary: 'Crear un nuevo reporte como invitado (siempre anónimo, sin autenticación)' })
+  @UseInterceptors(FilesInterceptor('files', 5, {
+    storage: diskStorage({
+      destination: join(__dirname, '../../public/uploads'),
+      filename: (req, file, cb) => {
+        // Generar nombre único con timestamp
+        const timestamp = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000);
+        const extension = file.originalname.split('.').pop();
+        const filename = `evidence_${timestamp}_${randomNum}.${extension}`;
+        cb(null, filename);
+      }
+    }),
+    fileFilter: (req, file, cb) => {
+      // Solo permitir imágenes
+      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Solo se permiten archivos de imagen (JPG, PNG, WebP)'), false);
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB máximo por archivo
+    }
+  }))
+  @ApiOperation({ summary: 'Crear un nuevo reporte como invitado (siempre anónimo, sin autenticación) con archivos adjuntos' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Reporte de invitado creado exitosamente.', type: ReportResponseDto })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
   async createGuestReport(
-    @Body() createReportDto: CreateReportDto
+    @Body() createReportDto: CreateReportDto,
+    @UploadedFiles() files?: Express.Multer.File[]
   ): Promise<ReportResponseDto> {
     // Forzar que sea anónimo para reportes de invitado
     const guestReportDto = { ...createReportDto, is_anonymous: true };
-    return await this.reportService.createGuestReport(guestReportDto);
+    return await this.reportService.createGuestReportWithFiles(guestReportDto, files);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Crear un nuevo reporte (puede ser anónimo)' })
+  @UseInterceptors(FilesInterceptor('files', 5, {
+    storage: diskStorage({
+      destination: join(__dirname, '../../public/uploads'),
+      filename: (req, file, cb) => {
+        // Generar nombre único con timestamp
+        const timestamp = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000);
+        const extension = file.originalname.split('.').pop();
+        const filename = `evidence_${timestamp}_${randomNum}.${extension}`;
+        cb(null, filename);
+      }
+    }),
+    fileFilter: (req, file, cb) => {
+      // Solo permitir imágenes
+      const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Solo se permiten archivos de imagen (JPG, PNG, WebP)'), false);
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB máximo por archivo
+    }
+  }))
+  @ApiOperation({ summary: 'Crear un nuevo reporte (puede ser anónimo) con archivos adjuntos' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Reporte creado exitosamente.', type: ReportResponseDto })
   @ApiResponse({ status: 401, description: 'No autenticado.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
   async create(
     @Req() req: AuthenticatedRequest,
-    @Body() createReportDto: CreateReportDto
+    @Body() createReportDto: CreateReportDto,
+    @UploadedFiles() files?: Express.Multer.File[]
   ): Promise<ReportResponseDto> {
     const userId = req.user.profile.id;
-    return await this.reportService.create(userId, createReportDto);
+    return await this.reportService.createWithFiles(userId, createReportDto, files);
   }
 
   @Put('admin/:id')

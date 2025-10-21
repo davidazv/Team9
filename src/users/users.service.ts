@@ -11,17 +11,11 @@ export class UserService {
     constructor(private readonly usersRepository: UsersRepository) {}
 
     async createUser(email: string, name: string, password: string) {
-        console.log("=== CREANDO USUARIO ===");
-        console.log("Email:", email);
-        console.log("Password:", password);
-        
         // Generar salt único
         const salt = crypto.randomBytes(16).toString('hex');
-        console.log("Salt generado:", salt);
         
         // Hashear la contraseña con el salt
         const hashed_password = hashPassword(password, salt);
-        console.log("Hash generado:", hashed_password);
         
         // Pasar tanto el hash como el salt al repository
         return this.usersRepository.createUser(email, name, hashed_password, salt);
@@ -32,23 +26,13 @@ export class UserService {
     }
 
     async validateUser(email: string, password: string) {
-        console.log("=== VALIDANDO USUARIO ===");
         const user = await this.usersRepository.findByEmail(email);
         if (!user) {
-            console.log(`Usuario no encontrado: ${email}`);
             return null;
         }
         
-        console.log("Usuario encontrado:", user.email);
-        console.log("Password ingresado:", password);
-        console.log("Salt en DB:", user.salt);
-        console.log("Hash en DB:", user.password_hash);
-        
         const hashedInputPassword = hashPassword(password, user.salt);
-        console.log("Hash calculado:", hashedInputPassword);
-        
         const isValid = user.password_hash === hashedInputPassword;
-        console.log("¿Contraseña válida?", isValid);
         
         return isValid ? user : null;
     }

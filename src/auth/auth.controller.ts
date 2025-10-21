@@ -63,9 +63,13 @@ export class AuthController {
             [body.email]
         );
         const admin = (rows as any[])[0];
-        if (!admin) throw new UnauthorizedException('Credenciales inválidas');
+        
+        if (!admin) {
+            throw new UnauthorizedException('Credenciales inválidas');
+        }
 
         const passwordHash = hashPassword(body.password, admin.salt);
+
         if (passwordHash !== admin.password_hash) {
             throw new UnauthorizedException('Credenciales inválidas');
         }

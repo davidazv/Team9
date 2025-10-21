@@ -362,6 +362,102 @@ export class ReportService {
   }
 
   // ============================================
+  // NUEVOS MÉTODOS CON SOPORTE PARA ARCHIVOS
+  // ============================================
+
+  // Método privado para procesar archivos ya guardados por multer
+  private async processUploadedFiles(files: Express.Multer.File[]): Promise<string[]> {
+    const fileUrls: string[] = [];
+
+    for (const file of files) {
+      // Los archivos ya fueron guardados por multer diskStorage
+      // Solo necesitamos crear las URLs
+      const fileUrl = `http://localhost:3000/public/uploads/${file.filename}`;
+      fileUrls.push(fileUrl);
+    }
+
+    return fileUrls;
+  }
+
+  // Crear reporte con archivos (usuario autenticado)
+  async createWithFiles(userId: number, createReportDto: CreateReportDto, files?: Express.Multer.File[]): Promise<ReportResponseDto> {
+    const pool = this.dbService.getPool();
+    
+    // Procesar archivos si existen
+    let evidenceUrl: string | null = null;
+    if (files && files.length > 0) {
+      const fileUrls = await this.processUploadedFiles(files);
+      evidenceUrl = fileUrls[0]; // Por ahora solo guardamos la primera imagen en evidence_url
+    }
+    
+    const sql = `
+      INSERT INTO reports 
+      (user_id, category_id, status_id, title, description, incident_date, location, fraud_contact, evidence_url, is_anonymous) 
+      VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    // Procesar fecha para extraer solo la parte de fecha (YYYY-MM-DD)
+    let incidentDate: string | null = null;
+    if (createReportDto.incident_date) {
+      const dateObj = new Date(createReportDto.incident_date);
+      incidentDate = dateObj.toISOString().split('T')[0]; // Extraer solo YYYY-MM-DD
+    }
+
+    const [result] = await pool.query(sql, [
+      userId,
+      createReportDto.category_id,
+      createReportDto.title,
+      createReportDto.description,
+      incidentDate,
+      createReportDto.location || null,
+      createReportDto.fraud_contact || null,
+      evidenceUrl,
+      createReportDto.is_anonymous || false
+    ]);
+    
+    const insertResult = result as any;
+    return this.findById(insertResult.insertId);
+  }
+
+  // Crear reporte de invitado con archivos
+  async createGuestReportWithFiles(createReportDto: CreateReportDto, files?: Express.Multer.File[]): Promise<ReportResponseDto> {
+    const pool = this.dbService.getPool();
+    
+    // Procesar archivos si existen
+    let evidenceUrl: string | null = null;
+    if (files && files.length > 0) {
+      const fileUrls = await this.processUploadedFiles(files);
+      evidenceUrl = fileUrls[0]; // Por ahora solo guardamos la primera imagen en evidence_url
+    }
+    
+    const sql = `
+      INSERT INTO reports 
+      (user_id, category_id, status_id, title, description, incident_date, location, fraud_contact, evidence_url, is_anonymous) 
+      VALUES (NULL, ?, 1, ?, ?, ?, ?, ?, ?, 1)
+    `;
+    
+    // Procesar fecha para extraer solo la parte de fecha (YYYY-MM-DD)
+    let incidentDate: string | null = null;
+    if (createReportDto.incident_date) {
+      const dateObj = new Date(createReportDto.incident_date);
+      incidentDate = dateObj.toISOString().split('T')[0]; // Extraer solo YYYY-MM-DD
+    }
+
+    const [result] = await pool.query(sql, [
+      createReportDto.category_id,
+      createReportDto.title,
+      createReportDto.description,
+      incidentDate,
+      createReportDto.location || null,
+      createReportDto.fraud_contact || null,
+      evidenceUrl
+    ]);
+    
+    const insertResult = result as any;
+    return this.findById(insertResult.insertId);
+  }
+
+  // ============================================
   // Mapear filas de BD a DTO
   // ============================================
   private mapToDto(row: any): ReportResponseDto {

@@ -195,15 +195,15 @@ INSERT INTO report_categories (name, description, type) VALUES
 
 -- Administradores con hash SHA-256
 INSERT INTO admins (name, email, password_hash, salt) VALUES
-('Carlos Martínez', 'admin@ofraud.com', SHA2(CONCAT('admin2024', 'salt123'), 256), 'salt123'),
-('Ana García', 'supervisor@ofraud.com', SHA2(CONCAT('supervisor123', 'salt123'), 256), 'salt123'),
-('Miguel Torres', 'soporte@ofraud.com', SHA2(CONCAT('soporte456', 'salt123'), 256), 'salt123');
+('Carlos Martínez', 'admin@ofraud.com', SHA2(CONCAT('admin123Carlos', 'salt123'), 256), 'salt123'),
+('Ana García', 'supervisor@ofraud.com', SHA2(CONCAT('supervisor123An4', 'salt123'), 256), 'salt123'),
+('Miguel Torres', 'soporte@ofraud.com', SHA2(CONCAT('soporteMike456', 'salt123'), 256), 'salt123');
 
 -- Usuarios de prueba con hash SHA-256
 INSERT INTO users (name, email, password_hash, salt) VALUES
-('Usuario Demo', 'demo@example.com', SHA2(CONCAT('demo123', 'salt123'), 256), 'salt123'),
-('María Pérez', 'maria@example.com', SHA2(CONCAT('maria123', 'salt789'), 256), 'salt789'),
-('José López', 'jose@example.com', SHA2(CONCAT('jose456', 'salt456'), 256), 'salt456');
+('Christopher Gordillo', 'demo@example.com', SHA2(CONCAT('Demo123Christopher', 'salt123'), 256), 'salt123'),
+('María Pérez', 'maria@example.com', SHA2(CONCAT('maria2025Princesa', 'salt789'), 256), 'salt789'),
+('José López', 'jose@example.com', SHA2(CONCAT('Josecito2025', 'salt456'), 256), 'salt456');
 
 -- Reportes de ejemplo (ACTUALIZADO con fraud_contact)
 INSERT INTO reports (user_id, category_id, status_id, title, description, incident_date, location, fraud_contact, evidence_url, is_anonymous, assigned_admin_id, created_at)

@@ -25,7 +25,7 @@ async function bootstrap() {
 
   // Habilitar CORS para el frontend
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+    origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:3002', 'http://127.0.0.1:3002'],
     credentials: true,
   });
 
@@ -56,11 +56,6 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-
-  console.log('🚀 oFRAUD API iniciada en http://localhost:3000');
-  console.log('📚 Swagger disponible en http://localhost:3000/api');
-  console.log('📁 Archivos estáticos en http://localhost:3000/public/');
-
   await app.listen(3000);
 }
 bootstrap();
