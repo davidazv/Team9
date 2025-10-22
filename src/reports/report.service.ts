@@ -247,6 +247,18 @@ export class ReportService {
     if (updateReportDto.status_id !== undefined) {
       setParts.push('status_id = ?');
       values.push(updateReportDto.status_id);
+      
+      // Si se acepta el reporte (status_id = 2) y no tiene admin asignado, asignar uno aleatorio
+      if (updateReportDto.status_id === 2 && !report.assigned_admin_id && !updateReportDto.assigned_admin_id) {
+        const availableAdmins = [1, 2, 3]; // IDs de administradores disponibles
+        const randomAdminId = availableAdmins[Math.floor(Math.random() * availableAdmins.length)];
+        setParts.push('assigned_admin_id = ?');
+        values.push(randomAdminId);
+      }
+    }
+    if (updateReportDto.assigned_admin_id !== undefined) {
+      setParts.push('assigned_admin_id = ?');
+      values.push(updateReportDto.assigned_admin_id);
     }
     if (updateReportDto.title !== undefined) {
       setParts.push('title = ?');

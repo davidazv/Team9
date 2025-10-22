@@ -72,4 +72,14 @@ export class UpdateReportDto {
     required: false
   })
   evidence_url?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  @ApiProperty({
+    example: 1,
+    description: 'ID del administrador asignado al reporte',
+    required: false
+  })
+  assigned_admin_id?: number;
 }
