@@ -37,9 +37,11 @@ DB_USERNAME=tu_usuario_db
 DB_PASSWORD=tu_contraseña_db
 DB_DATABASE=nombre_base_datos
 
+
 # JWT Configuration
 JWT_SECRET=tu_clave_secreta_jwt
-JWT_EXPIRES_IN=24h
+JWT_EXPIRES=1m
+JWT_REFRESH_EXPIRES=7d
 
 # Application Configuration
 PORT=3000
@@ -48,10 +50,6 @@ NODE_ENV=development
 # File Upload Configuration
 UPLOAD_PATH=./public/uploads
 MAX_FILE_SIZE=5242880
-
-# Admin Configuration
-ADMIN_EMAIL=admin@ejemplo.com
-ADMIN_PASSWORD=contraseña_admin_segura
 ```
 
 **Nota:** Reemplaza todos los valores de ejemplo con tus credenciales reales. Nunca compartas tu archivo `.env` públicamente.
