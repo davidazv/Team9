@@ -22,7 +22,6 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     salt VARCHAR(255) NOT NULL,
-    apple_id VARCHAR(255) UNIQUE NULL COMMENT 'Apple ID para login con Apple',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -157,7 +156,6 @@ CREATE INDEX idx_reports_category_id ON reports(category_id);
 CREATE INDEX idx_reports_status_id ON reports(status_id);
 CREATE INDEX idx_reports_created_at ON reports(created_at);
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_apple_id ON users(apple_id);
 CREATE INDEX idx_admins_email ON admins(email);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_report_comments_report_id ON report_comments(report_id);
