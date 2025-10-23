@@ -3,6 +3,8 @@ import { DbService } from '../db/db.service';
 import { ReportResponseDto } from './dto/report-response.dto';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { CommentResponseDto } from './dto/comment-response.dto';
 
 @Injectable()
 export class ReportService {
@@ -467,6 +469,141 @@ export class ReportService {
     
     const insertResult = result as any;
     return this.findById(insertResult.insertId);
+  }
+
+  // ============================================
+  // MÉTODOS PARA COMENTARIOS
+  // ============================================
+
+  async getComments(reportId: number): Promise<CommentResponseDto[]> {
+    const pool = this.dbService.getPool();
+    
+    // Verificar que el reporte existe
+    await this.findById(reportId);
+    
+    const sql = `
+      SELECT 
+        rc.id,
+        rc.report_id,
+        rc.admin_id,
+        a.name as admin_name,
+        rc.comment,
+        rc.is_internal,
+        rc.created_at,
+        rc.updated_at
+      FROM report_comments rc
+      LEFT JOIN admins a ON rc.admin_id = a.id
+      WHERE rc.report_id = ?
+      ORDER BY rc.created_at ASC
+    `;
+    
+    const [rows] = await pool.query(sql, [reportId]);
+    return (rows as any[]).map(row => this.mapCommentToDto(row));
+  }
+
+  async addComment(reportId: number, adminId: number, createCommentDto: CreateCommentDto): Promise<CommentResponseDto> {
+    const pool = this.dbService.getPool();
+    
+    // Verificar que el reporte existe
+    await this.findById(reportId);
+    
+    const sql = `
+      INSERT INTO report_comments (report_id, admin_id, comment, is_internal)
+      VALUES (?, ?, ?, ?)
+    `;
+    
+    const [result] = await pool.query(sql, [
+      reportId,
+      adminId,
+      createCommentDto.comment,
+      createCommentDto.is_internal || false
+    ]);
+    
+    const insertResult = result as any;
+    return this.getCommentById(insertResult.insertId);
+  }
+
+  async updateComment(commentId: number, adminId: number, updateCommentDto: CreateCommentDto): Promise<CommentResponseDto> {
+    const pool = this.dbService.getPool();
+    
+    // Verificar que el comentario existe y pertenece al admin
+    const comment = await this.getCommentById(commentId);
+    if (comment.admin_id !== adminId) {
+      throw new ForbiddenException('Solo puedes editar tus propios comentarios');
+    }
+    
+    const sql = `
+      UPDATE report_comments 
+      SET comment = ?, is_internal = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `;
+    
+    await pool.query(sql, [
+      updateCommentDto.comment,
+      updateCommentDto.is_internal || false,
+      commentId
+    ]);
+    
+    return this.getCommentById(commentId);
+  }
+
+  async deleteComment(commentId: number, adminId: number): Promise<void> {
+    const pool = this.dbService.getPool();
+    
+    // Verificar que el comentario existe y pertenece al admin
+    const comment = await this.getCommentById(commentId);
+    if (comment.admin_id !== adminId) {
+      throw new ForbiddenException('Solo puedes eliminar tus propios comentarios');
+    }
+    
+    const sql = `DELETE FROM report_comments WHERE id = ?`;
+    const [result] = await pool.query(sql, [commentId]);
+    
+    const deleteResult = result as any;
+    if (deleteResult.affectedRows === 0) {
+      throw new NotFoundException('Comentario no encontrado');
+    }
+  }
+
+  private async getCommentById(commentId: number): Promise<CommentResponseDto> {
+    const pool = this.dbService.getPool();
+    
+    const sql = `
+      SELECT 
+        rc.id,
+        rc.report_id,
+        rc.admin_id,
+        a.name as admin_name,
+        rc.comment,
+        rc.is_internal,
+        rc.created_at,
+        rc.updated_at
+      FROM report_comments rc
+      LEFT JOIN admins a ON rc.admin_id = a.id
+      WHERE rc.id = ?
+    `;
+    
+    const [rows] = await pool.query(sql, [commentId]);
+    const results = rows as any[];
+    
+    if (results.length === 0) {
+      throw new NotFoundException('Comentario no encontrado');
+    }
+    
+    return this.mapCommentToDto(results[0]);
+  }
+
+  private mapCommentToDto(row: any): CommentResponseDto {
+    return {
+      id: row.id,
+      report_id: row.report_id,
+      admin_id: row.admin_id,
+      admin_name: row.admin_name,
+      comment: row.comment,
+      is_internal: row.is_internal,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
   }
 
   // ============================================

@@ -7,7 +7,10 @@ import { ReportService } from './report.service';
 import { ReportResponseDto } from './dto/report-response.dto';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { CommentResponseDto } from './dto/comment-response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AdminGuard } from 'src/common/guards/admin.guard';
 import type { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request';
 
 @ApiTags('reports')
@@ -253,5 +256,76 @@ export class ReportController {
     const userId = req.user.profile.id;
     await this.reportService.delete(id, userId);
     return { message: 'Reporte eliminado exitosamente' };
+  }
+
+  // ============================================
+  // ENDPOINTS PARA COMENTARIOS DE REPORTES
+  // ============================================
+
+  @Get(':id/comments')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener todos los comentarios de un reporte (solo admins)' })
+  @ApiParam({ name: 'id', description: 'ID del reporte', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Lista de comentarios del reporte.', type: [CommentResponseDto] })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Solo administradores pueden ver comentarios.' })
+  @ApiResponse({ status: 404, description: 'Reporte no encontrado.' })
+  async getReportComments(@Param('id') reportId: number): Promise<CommentResponseDto[]> {
+    return await this.reportService.getComments(reportId);
+  }
+
+  @Post(':id/comments')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Agregar un comentario a un reporte (solo admins)' })
+  @ApiParam({ name: 'id', description: 'ID del reporte', type: 'number' })
+  @ApiResponse({ status: 201, description: 'Comentario creado exitosamente.', type: CommentResponseDto })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Solo administradores pueden agregar comentarios.' })
+  @ApiResponse({ status: 404, description: 'Reporte no encontrado.' })
+  async addReportComment(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') reportId: number,
+    @Body() createCommentDto: CreateCommentDto
+  ): Promise<CommentResponseDto> {
+    const adminId = req.user.profile.id;
+    return await this.reportService.addComment(reportId, adminId, createCommentDto);
+  }
+
+  @Put('comments/:commentId')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Editar un comentario (solo el admin que lo creó)' })
+  @ApiParam({ name: 'commentId', description: 'ID del comentario', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Comentario actualizado.', type: CommentResponseDto })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Solo administradores pueden editar comentarios.' })
+  @ApiResponse({ status: 404, description: 'Comentario no encontrado.' })
+  async updateComment(
+    @Req() req: AuthenticatedRequest,
+    @Param('commentId') commentId: number,
+    @Body() updateCommentDto: CreateCommentDto
+  ): Promise<CommentResponseDto> {
+    const adminId = req.user.profile.id;
+    return await this.reportService.updateComment(commentId, adminId, updateCommentDto);
+  }
+
+  @Delete('comments/:commentId')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar un comentario (solo el admin que lo creó)' })
+  @ApiParam({ name: 'commentId', description: 'ID del comentario', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Comentario eliminado.' })
+  @ApiResponse({ status: 401, description: 'No autenticado.' })
+  @ApiResponse({ status: 403, description: 'Solo administradores pueden eliminar comentarios.' })
+  @ApiResponse({ status: 404, description: 'Comentario no encontrado.' })
+  async deleteComment(
+    @Req() req: AuthenticatedRequest,
+    @Param('commentId') commentId: number
+  ): Promise<{ message: string }> {
+    const adminId = req.user.profile.id;
+    await this.reportService.deleteComment(commentId, adminId);
+    return { message: 'Comentario eliminado exitosamente' };
   }
 }
