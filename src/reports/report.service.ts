@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DbService } from '../db/db.service';
+import { randomBytes } from 'crypto';
 import { ReportResponseDto } from './dto/report-response.dto';
 import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
@@ -253,7 +254,8 @@ export class ReportService {
       // Si se acepta el reporte (status_id = 2) y no tiene admin asignado, asignar uno aleatorio
       if (updateReportDto.status_id === 2 && !report.assigned_admin_id && !updateReportDto.assigned_admin_id) {
         const availableAdmins = [1, 2, 3]; // IDs de administradores disponibles
-        const randomAdminId = availableAdmins[Math.floor(Math.random() * availableAdmins.length)];
+        const randomIndex = randomBytes(1)[0] % availableAdmins.length;
+        const randomAdminId = availableAdmins[randomIndex];
         setParts.push('assigned_admin_id = ?');
         values.push(randomAdminId);
       }

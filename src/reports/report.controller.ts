@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery, 
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join } from 'path';
+import { randomBytes } from 'crypto';
 import { ReportService } from './report.service';
 import { ReportResponseDto } from './dto/report-response.dto';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -131,9 +132,9 @@ export class ReportController {
     storage: diskStorage({
       destination: join(__dirname, '../../public/uploads'),
       filename: (req, file, cb) => {
-        // Generar nombre único con timestamp
+        // Generar nombre único con timestamp y random criptográfico
         const timestamp = Date.now();
-        const randomNum = Math.floor(Math.random() * 1000);
+        const randomNum = randomBytes(2).readUInt16BE(0);
         const extension = file.originalname.split('.').pop();
         const filename = `evidence_${timestamp}_${randomNum}.${extension}`;
         cb(null, filename);
@@ -150,6 +151,8 @@ export class ReportController {
     },
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB máximo por archivo
+      files: 5, // Máximo 5 archivos
+      fieldSize: 1 * 1024 * 1024, // 1MB para campos de texto
     }
   }))
   @ApiOperation({ summary: 'Crear un nuevo reporte como invitado (siempre anónimo, sin autenticación) con archivos adjuntos' })
@@ -172,9 +175,9 @@ export class ReportController {
     storage: diskStorage({
       destination: join(__dirname, '../../public/uploads'),
       filename: (req, file, cb) => {
-        // Generar nombre único con timestamp
+        // Generar nombre único con timestamp y random criptográfico
         const timestamp = Date.now();
-        const randomNum = Math.floor(Math.random() * 1000);
+        const randomNum = randomBytes(2).readUInt16BE(0);
         const extension = file.originalname.split('.').pop();
         const filename = `evidence_${timestamp}_${randomNum}.${extension}`;
         cb(null, filename);
@@ -191,6 +194,8 @@ export class ReportController {
     },
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB máximo por archivo
+      files: 5, // Máximo 5 archivos
+      fieldSize: 1 * 1024 * 1024, // 1MB para campos de texto
     }
   }))
   @ApiOperation({ summary: 'Crear un nuevo reporte (puede ser anónimo) con archivos adjuntos' })

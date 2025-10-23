@@ -3,6 +3,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { diskStorage } from "multer";
 import { join } from "path";
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiResponse } from "@nestjs/swagger";
+import { randomBytes } from 'crypto';
 
 @ApiTags('files')
 @Controller("files")
@@ -38,9 +39,9 @@ export class FileController {
         storage: diskStorage({
             destination: join(__dirname, "../../public/uploads"),
             filename: (req, file, cb) => {
-                // Generar nombre único con timestamp
+                // Generar nombre único con timestamp y random criptográfico
                 const timestamp = Date.now();
-                const randomNum = Math.floor(Math.random() * 1000);
+                const randomNum = randomBytes(2).readUInt16BE(0);
                 const extension = file.originalname.split('.').pop();
                 const filename = `evidence_${timestamp}_${randomNum}.${extension}`;
                 cb(null, filename);
@@ -57,6 +58,8 @@ export class FileController {
         },
         limits: {
             fileSize: 5 * 1024 * 1024, // 5MB máximo
+            files: 1, // Máximo 1 archivo
+            fieldSize: 1 * 1024 * 1024, // 1MB para campos de texto
         }
     }))
     uploadFile(@UploadedFile() file: Express.Multer.File) {
